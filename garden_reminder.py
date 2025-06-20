@@ -90,7 +90,7 @@ def send_reminder_email(water_list, fertilizer_list):
 
 
 def main():
-    df = read_garden_data(FILE_PATH)
+    df = read_garden_data(os.path.abspath(FILE_PATH))
     water_due, fert_due = check_due_plants(df)
     send_reminder_email(water_due, fert_due)
 
