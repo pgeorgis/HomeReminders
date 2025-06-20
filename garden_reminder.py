@@ -1,4 +1,5 @@
 import os
+import re
 import smtplib
 from datetime import datetime
 from dateutil import parser
@@ -67,7 +68,7 @@ def check_due_plants(df):
         location = row.get(LOCATION_FIELD, "")
         plant_id = f"{common_name} [{scientific_name}] ({location})"
         # In case of missing scientific name or location, remove empty [] and ()
-        plant_id = plant_id.replace("[]", "").replace("()", "")
+        plant_id = re.sub(r"[\[\(](nan)?[\]\)]", "", plant_id)
         last_watered_date = parse_date(row[LAST_WATERED_FIELD]) if not pd.isna(row[LAST_WATERED_FIELD]) else pd.NA
         last_fertilized_date = parse_date(row[LAST_FERTILIZED_FIELD]) if not pd.isna(row[LAST_FERTILIZED_FIELD]) else pd.NA
 
