@@ -15,16 +15,16 @@ SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT"))
 SMTP_USERNAME = os.getenv("SMTP_USERNAME")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
-REMINDER_SUBJECT = os.getenv("EMAIL_SUBJECT")
+REMINDER_SUBJECT = os.getenv("EMAIL_SUBJECT", "Daily Plant Care Reminder")
 
 FILE_PATH = os.getenv("FILE_PATH")
-LAST_WATERED_FIELD = os.getenv("LAST_WATERED_FIELD")
-LAST_FERTILIZED_FIELD = os.getenv("LAST_FERTILIZED_FIELD")
-MAX_WATER_INTERVAL_FIELD = os.getenv("MAX_WATER_INTERVAL_FIELD")
-MAX_FERTILIZE_INTERVAL_FIELD = os.getenv("MAX_FERTILIZE_INTERVAL_FIELD")
-COMMON_NAME_FIELD = os.getenv("COMMON_NAME_FIELD")
-SCIENTIFIC_NAME_FIELD = os.getenv("SCIENTIFIC_NAME_FIELD")
-LOCATION_FIELD = os.getenv("LOCATION_FIELD")
+LAST_WATERED_FIELD = os.getenv("LAST_WATERED_FIELD", "Last Watered")
+LAST_FERTILIZED_FIELD = os.getenv("LAST_FERTILIZED_FIELD", "Last Fertilized")
+MAX_WATER_INTERVAL_FIELD = os.getenv("MAX_WATER_INTERVAL_FIELD", "Max Watering Interval")
+MAX_FERTILIZE_INTERVAL_FIELD = os.getenv("MAX_FERTILIZE_INTERVAL_FIELD", "Max Fertilizing Interval")
+COMMON_NAME_FIELD = os.getenv("COMMON_NAME_FIELD", "Common name")
+SCIENTIFIC_NAME_FIELD = os.getenv("SCIENTIFIC_NAME_FIELD", "Latin name")
+LOCATION_FIELD = os.getenv("LOCATION_FIELD", "Location")
 
 
 def read_garden_data(file_path):
@@ -54,9 +54,11 @@ def check_due_plants(df):
 
     for _, row in df.iterrows():
         common_name = row[COMMON_NAME_FIELD]
-        scientific_name = row[SCIENTIFIC_NAME_FIELD]
-        location = row[LOCATION_FIELD]
+        scientific_name = row.get(SCIENTIFIC_NAME_FIELD, "")
+        location = row.get(LOCATION_FIELD, "")
         plant_id = f"{common_name} [{scientific_name}] ({location})"
+        # In case of missing scientific name or location, remove empty [] and ()
+        plant_id = plant_id.replace("[]", "").replace("()", "")
         last_watered_date = row[LAST_WATERED_FIELD].date()
         last_fertilized_date = row[LAST_FERTILIZED_FIELD].date()
 
@@ -69,6 +71,7 @@ def check_due_plants(df):
 
 
 def send_reminder_email(water_list, fertilizer_list):
+    
     if not water_list and not fertilizer_list:
         return
 
