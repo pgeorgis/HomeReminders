@@ -49,6 +49,8 @@ def read_garden_data(file_path):
 
 
 def parse_date(date_str):
+    if isinstance(date_str, pd.Timestamp):
+        return date_str.date()
     dt = parser.parse(date_str)
     date = dt.date()
     return date
