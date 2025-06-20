@@ -1,6 +1,7 @@
 import os
 import smtplib
 from datetime import datetime
+from dateutil import parser
 from email.mime.text import MIMEText
 
 import pandas as pd
@@ -47,6 +48,12 @@ def read_garden_data(file_path):
     return df
 
 
+def parse_date(date_str):
+    dt = parser.parse(date_str)
+    date = dt.date()
+    return date
+
+
 def check_due_plants(df):
     today = datetime.today().date()
     due_water = []
@@ -59,8 +66,8 @@ def check_due_plants(df):
         plant_id = f"{common_name} [{scientific_name}] ({location})"
         # In case of missing scientific name or location, remove empty [] and ()
         plant_id = plant_id.replace("[]", "").replace("()", "")
-        last_watered_date = row[LAST_WATERED_FIELD].date()
-        last_fertilized_date = row[LAST_FERTILIZED_FIELD].date()
+        last_watered_date = parse_date(row[LAST_WATERED_FIELD]) if not pd.isna(row[LAST_WATERED_FIELD]) else pd.NA
+        last_fertilized_date = parse_date(row[LAST_FERTILIZED_FIELD]) if not pd.isna(row[LAST_FERTILIZED_FIELD]) else pd.NA
 
         if pd.isna(last_watered_date) or (today - last_watered_date).days >= row[MAX_WATER_INTERVAL_FIELD]:
             due_water.append(plant_id)
