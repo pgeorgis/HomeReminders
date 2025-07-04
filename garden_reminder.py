@@ -57,10 +57,10 @@ def parse_date(date_str: str):
     return date
 
 
-def check_due_plants(df: pd.DataFrame) -> tuple[list, list]:
+def check_due_plants(df: pd.DataFrame) -> tuple[dict, dict]:
     today = datetime.today().date()
-    due_water = []
-    due_fertilizer = []
+    due_water = {}
+    due_fertilizer = {}
 
     for _, row in df.iterrows():
         common_name = row[COMMON_NAME_FIELD]
@@ -72,29 +72,45 @@ def check_due_plants(df: pd.DataFrame) -> tuple[list, list]:
         last_watered_date = parse_date(row[LAST_WATERED_FIELD]) if not pd.isna(row[LAST_WATERED_FIELD]) else pd.NA
         last_fertilized_date = parse_date(row[LAST_FERTILIZED_FIELD]) if not pd.isna(row[LAST_FERTILIZED_FIELD]) else pd.NA
 
-        if pd.isna(last_watered_date) or (today - last_watered_date).days >= row[MAX_WATER_INTERVAL_FIELD]:
-            due_water.append(plant_id)
+        if pd.isna(last_watered_date):
+            due_water[plant_id] = "last watering date unknown"
+        elif (today - last_watered_date).days >= row[MAX_WATER_INTERVAL_FIELD]:
+            days_ago = (today - last_watered_date).days
+            last_watered_date = last_watered_date.strftime("%Y-%m-%d")
+            due_water[plant_id] = f"last watered {days_ago} days ago ({last_watered_date})"
+
 
     # Check whether plants due for watering are also due for fertilizing
     for plant_id in due_water:
-        if pd.isna(last_fertilized_date) or (today - last_fertilized_date).days >= row[MAX_FERTILIZE_INTERVAL_FIELD]:
-            due_fertilizer.append(plant_id)
-            due_water.remove(plant_id)
+        if pd.isna(last_fertilized_date):
+            due_fertilizer[plant_id] = "last fertilization date unknown"
+            del due_water[plant_id]
+        elif (today - last_fertilized_date).days >= row[MAX_FERTILIZE_INTERVAL_FIELD]:
+            days_ago = (today - last_fertilized_date).days
+            last_fertilized_date = last_fertilized_date.strftime("%Y-%m-%d")
+            due_fertilizer[plant_id] = f"{due_water[plant_id]} and last fertilized {days_ago} days ago ({last_fertilized_date})"
+            del due_water[plant_id]
 
     return due_water, due_fertilizer
 
 
-def send_reminder_email(plants_to_be_watered: list = None,
-                        plants_to_be_fertilized: list = None
+def send_reminder_email(plants_to_be_watered: dict = None,
+                        plants_to_be_fertilized: dict = None
                         ):
     if not plants_to_be_watered and not plants_to_be_fertilized:
         return
 
     body = ""
     if plants_to_be_fertilized:
-        body += "🌿 **Plants needing watering AND fertilizing today**:\n•\t" + "\n•\t".join(plants_to_be_fertilized)
+        body += "🌿 **Plants needing watering AND fertilizing today**:"
+        for plant_id, latest_date in plants_to_be_fertilized.items():
+            body += f"\n\n•\t{plant_id}\n\t{latest_date}"
+    if plants_to_be_watered and plants_to_be_fertilized:
+        body += "\n\n\n"
     if plants_to_be_watered:
-        body += "🌱 **Plants needing watering today**:\n•\t" + "\n•\t".join(plants_to_be_watered) + "\n\n"
+        body += "🌱 **Plants needing watering today**:"
+        for plant_id, latest_date in plants_to_be_watered.items():
+            body += f"\n\n•\t{plant_id}\n\t{latest_date}"
 
     msg = MIMEText(body)
     msg["Subject"] = REMINDER_SUBJECT
