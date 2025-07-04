@@ -2,14 +2,14 @@ import os
 import re
 import smtplib
 from datetime import datetime
-from dateutil import parser
 from email.mime.text import MIMEText
 
 import pandas as pd
 from aspose.cells import Workbook
+from dateutil import parser
 from dotenv import load_dotenv
 
-# Load in email configuration parameters and custom field names 
+# Load in email configuration parameters and custom field names
 load_dotenv()
 EMAIL_SENDER = os.getenv("EMAIL_SENDER")
 EMAIL_RECEIVER = os.getenv("EMAIL_RECEIVER")
@@ -29,7 +29,7 @@ SCIENTIFIC_NAME_FIELD = os.getenv("SCIENTIFIC_NAME_FIELD", "Latin name")
 LOCATION_FIELD = os.getenv("LOCATION_FIELD", "Location")
 
 
-def read_garden_data(file_path):
+def read_garden_data(file_path: str) -> pd.DataFrame:
     if file_path.endswith(".csv"):
         df = pd.read_csv(file_path, parse_dates=[LAST_WATERED_FIELD, LAST_FERTILIZED_FIELD])
         # Drop aspose watermark (added if .csv file was converted from .numbers using aspose.cells.Workbook)
@@ -49,7 +49,7 @@ def read_garden_data(file_path):
     return df
 
 
-def parse_date(date_str):
+def parse_date(date_str: str):
     if isinstance(date_str, pd.Timestamp):
         return date_str.date()
     dt = parser.parse(date_str)
@@ -57,7 +57,7 @@ def parse_date(date_str):
     return date
 
 
-def check_due_plants(df):
+def check_due_plants(df: pd.DataFrame) -> tuple[list, list]:
     today = datetime.today().date()
     due_water = []
     due_fertilizer = []
@@ -74,22 +74,27 @@ def check_due_plants(df):
 
         if pd.isna(last_watered_date) or (today - last_watered_date).days >= row[MAX_WATER_INTERVAL_FIELD]:
             due_water.append(plant_id)
+
+    # Check whether plants due for watering are also due for fertilizing
+    for plant_id in due_water:
         if pd.isna(last_fertilized_date) or (today - last_fertilized_date).days >= row[MAX_FERTILIZE_INTERVAL_FIELD]:
             due_fertilizer.append(plant_id)
+            due_water.remove(plant_id)
 
     return due_water, due_fertilizer
 
 
-def send_reminder_email(water_list, fertilizer_list):
-    
-    if not water_list and not fertilizer_list:
+def send_reminder_email(plants_to_be_watered: list = None,
+                        plants_to_be_fertilized: list = None
+                        ):
+    if not plants_to_be_watered and not plants_to_be_fertilized:
         return
 
     body = ""
-    if water_list:
-        body += "🌱 **Plants needing watering today**:\n•\t" + "\n•\t".join(water_list) + "\n\n"
-    if fertilizer_list:
-        body += "🌿 **Plants needing fertilizing today**:\n•\t" + "\n•\t".join(fertilizer_list)
+    if plants_to_be_fertilized:
+        body += "🌿 **Plants needing watering AND fertilizing today**:\n•\t" + "\n•\t".join(plants_to_be_fertilized)
+    if plants_to_be_watered:
+        body += "🌱 **Plants needing watering today**:\n•\t" + "\n•\t".join(plants_to_be_watered) + "\n\n"
 
     msg = MIMEText(body)
     msg["Subject"] = REMINDER_SUBJECT
