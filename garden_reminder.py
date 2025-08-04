@@ -78,18 +78,22 @@ def check_due_plants(df: pd.DataFrame) -> tuple[dict, dict]:
             days_ago = (today - last_watered_date).days
             last_watered_date = last_watered_date.strftime("%Y-%m-%d")
             due_water[plant_id] = f"last watered {days_ago} days ago ({last_watered_date})"
-
-
-    # Check whether plants due for watering are also due for fertilizing
-    for plant_id in due_water:
         if pd.isna(last_fertilized_date):
             due_fertilizer[plant_id] = "last fertilization date unknown"
-            del due_water[plant_id]
         elif (today - last_fertilized_date).days >= row[MAX_FERTILIZE_INTERVAL_FIELD]:
             days_ago = (today - last_fertilized_date).days
             last_fertilized_date = last_fertilized_date.strftime("%Y-%m-%d")
-            due_fertilizer[plant_id] = f"{due_water[plant_id]} and last fertilized {days_ago} days ago ({last_fertilized_date})"
-            del due_water[plant_id]
+            due_fertilizer[plant_id] = f"last fertilized {days_ago} days ago ({last_fertilized_date})"
+
+
+    # Check whether plants due for watering are also due for fertilizing
+    ids_to_delete = set()
+    for plant_id in due_water:
+        if plant_id in due_fertilizer:
+            due_fertilizer[plant_id] = f"{due_water[plant_id]} and {due_fertilizer[plant_id]}"
+            ids_to_delete.add(plant_id)
+    for plant_id in ids_to_delete:
+        del due_water[plant_id]
 
     return due_water, due_fertilizer
 
