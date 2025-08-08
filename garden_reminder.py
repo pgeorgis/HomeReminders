@@ -94,6 +94,13 @@ def check_due_plants(df: pd.DataFrame) -> tuple[dict, dict]:
             ids_to_delete.add(plant_id)
     for plant_id in ids_to_delete:
         del due_water[plant_id]
+    # Remove reminders for plants that need fertilizing, but not yet watering
+    ids_to_delete = set()
+    for plant_id in due_fertilizer:
+        if plant_id not in due_water:
+            ids_to_delete.add(plant_id)
+    for plant_id in ids_to_delete:
+        del due_fertilizer[plant_id]
 
     return due_water, due_fertilizer
 
